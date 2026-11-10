@@ -152,3 +152,50 @@ class AsesoriaEspecializada(Servicio):
 
     def obtener_descripcion(self) -> str:
         return f"Asesoría en el área de: {self.area_experto}"
+
+# ==========================================
+# CLASE RESERVA CON MANEJO AVANZADO DE EXCEPCIONES
+# ==========================================
+class Reserva:
+    def __init__(self, cliente: Cliente, servicio: Servicio, cantidad_tiempo: int, parametro_extra=None):
+        self.cliente = cliente
+        self.servicio = servicio
+        self.cantidad_tiempo = cantidad_tiempo
+        self.parametro_extra = parametro_extra
+        self.estado = "Pendiente"
+        self.costo_total = 0.0
+
+    def procesar_reserva(self):
+        """Implementa bloques try/except/else/finally exigidos en la guía."""
+        try:
+            logging.info(f"Iniciando procesamiento de reserva para cliente {self.cliente.nombre}")
+            
+            # Validación previa de parámetros
+            if self.cantidad_tiempo <= 0:
+                raise ValueError("El tiempo de reserva no puede ser negativo o cero.")
+            
+            # Cálculo polimórfico del costo dependiendo del tipo de servicio
+            if isinstance(self.servicio, ReservaSala):
+                self.costo_total = self.servicio.calcular_costo(self.cantidad_tiempo, descuento_porcentaje=10.0)
+            elif isinstance(self.servicio, AlquilerEquipo):
+                seguro = bool(self.parametro_extra)
+                self.costo_total = self.servicio.calcular_costo(self.cantidad_tiempo, seguro_adicional=seguro)
+            elif isinstance(self.servicio, AsesoriaEspecializada):
+                self.costo_total = self.servicio.calcular_costo(self.cantidad_tiempo)
+            else:
+                raise ErrorReservaInvalida("Tipo de servicio desconocido o no soportado.")
+
+        except (ValueError, ErrorServicioNoDisponible) as ve:
+            self.estado = "Fallida"
+            logging.error(f"Error controlado en reserva: {ve}")
+            raise ErrorReservaInvalida(f"La reserva no pudo ser procesada.") from ve
+        
+        else:
+            # Se ejecuta solo si no ocurren excepciones
+            self.estado = "Confirmada"
+            logging.info(f"Reserva exitosa. Costo total: ${self.costo_total:.2f}")
+        
+        finally:
+            # Bloque que siempre se ejecuta para auditoría o limpieza
+            print(f"[AUDITORÍA] Operación de reserva finalizada con estado: {self.estado}\n")
+
